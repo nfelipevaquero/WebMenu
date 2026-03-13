@@ -1,3 +1,4 @@
+// TU SHADER ORIGINAL INTACTO
 const vertexShader = `
     void main() {
         gl_Position = vec4(position, 1.0);
@@ -15,35 +16,25 @@ const fragmentShader = `
     }
 
     void main(void) {
-        // Coordenadas normalizadas
         vec2 uv = (gl_FragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
         
-        // Mosaico sutil (mantenido de tu código)
         vec2 fMosaicScal = vec2(4.0, 2.0);
         vec2 vScreenSize = vec2(256.0, 256.0);
         uv.x = floor(uv.x * vScreenSize.x / fMosaicScal.x) / (vScreenSize.x / fMosaicScal.x);
         uv.y = floor(uv.y * vScreenSize.y / fMosaicScal.y) / (vScreenSize.y / fMosaicScal.y);       
           
-        // VELOCIDAD: Reducida para que sea más lenta
-        float t = time * 0.2 + random(uv.x) * 0.4; 
-        
-        // GROSOR: Aumentado de 0.0008 a 0.002 para que NO se vea negro
-        float lineWidth = 0.002;
+        float t = time * 0.15 + random(uv.x) * 0.4;
+        float lineWidth = 0.0015;
 
         vec3 colorLines = vec3(0.0);
         for(int j = 0; j < 3; j++){
             for(int i=0; i < 5; i++){
-                // CAMBIO CLAVE: Usamos abs(uv.y) o uv.x en lugar de length(uv) para eliminar el círculo
-                // Esto hace que las líneas atraviesen toda la sección
                 float linePos = fract(t - 0.01*float(j) + float(i)*0.01);
                 colorLines[j] += lineWidth * float(i*i) / abs(linePos - abs(uv.y));        
             }
         }
 
-        // Aplicamos el color y aumentamos un poco la intensidad
-        vec3 finalColor = colorLines * baseColor * 1.5;
-        
-        gl_FragColor = vec4(finalColor, 1.0);
+        gl_FragColor = vec4(colorLines * baseColor * 1.8, 1.0);
     }
 `;
 
@@ -64,35 +55,34 @@ function initShader(containerId, colorHex) {
         baseColor: { value: new THREE.Color(colorHex) }
     };
 
-    const material = new THREE.ShaderMaterial({
-        uniforms, vertexShader, fragmentShader
-    });
-
-    // Usamos PlaneGeometry estándar
+    const material = new THREE.ShaderMaterial({ uniforms, vertexShader, fragmentShader });
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
     scene.add(mesh);
 
     function resize() {
-        const w = container.clientWidth;
-        const h = container.clientHeight;
+        // Fijamos la resolución al tamaño real de la ventana para que coincida con el CSS y no se amplíe
+        const w = window.innerWidth;
+        const h = window.innerHeight;
         renderer.setSize(w, h);
         uniforms.resolution.value.set(w, h);
     }
 
+    // Solo redimensionamos cuando cambia la ventana
     window.addEventListener('resize', resize);
     resize();
 
     function animate(now) {
-        // Multiplicador de tiempo muy bajo para máxima lentitud
-        uniforms.time.value = now * 0.0005; 
+        uniforms.time.value = now * 0.0005;
         renderer.render(scene, camera);
         requestAnimationFrame(animate);
     }
     requestAnimationFrame(animate);
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-    initShader('canvas-1', '#a855f7'); // Púrpura
-    initShader('canvas-2', '#22c55e'); // Verde
-    initShader('canvas-3', '#ef4444'); // Rojo
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        initShader('canvas-1', '#a855f7');
+        initShader('canvas-2', '#22c55e');
+        initShader('canvas-3', '#ef4444');
+    }, 100);
 });
