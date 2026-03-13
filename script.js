@@ -1,84 +1,133 @@
 const vertexShader = `
+    varying vec2 vUv;
     void main() {
-        gl_Position = vec4( position, 1.0 );
+        vUv = uv;
+        gl_Position = vec4(position, 1.0);
     }
 `;
 
-const fragmentShaderSource = (colorType) => `
+const fragmentShader = `
     precision highp float;
     uniform vec2 resolution;
     uniform float time;
-    
-    float random (vec2 st) {
-        return fract(sin(dot(st.xy, vec2(12.9898,78.233)))* 43758.5453123);
+    uniform int themeType; // 0 = Púrpura, 1 = Verde
+
+    varying vec2 vUv;
+
+    // Función de ruido simple para aleatoriedad
+    float noise(vec2 st) {
+        return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
     }
 
-    void main(void) {
+    void main() {
+        // Normalizar UV: -1.0 a 1.0, manteniendo relación de aspecto
         vec2 uv = (gl_FragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
-        vec2 fMosaicScal = vec2(4.0, 2.0);
-        vec2 vScreenSize = vec2(256,256);
-        uv.x = floor(uv.x * vScreenSize.x / fMosaicScal.x) / (vScreenSize.x / fMosaicScal.x);
-        uv.y = floor(uv.y * vScreenSize.y / fMosaicScal.y) / (vScreenSize.y / fMosaicScal.y);       
         
-        float t = time*0.06+random(uv.x)*0.4;
-        float lineWidth = 0.001;
+        // --- EFECTO 1: LÍNEAS VERTICALES DE FONDO (COMO LA IMAGEN) ---
+        float lineDensity = 40.0;
+        float linePattern = abs(sin(uv.x * lineDensity * 3.14159));
+        // Degradado sutil de negro a gris oscuro
+        vec3 col = vec3(0.02, 0.02, 0.03) * linePattern;
 
-        vec3 color = vec3(0.0);
-        for(int j = 0; j < 3; j++){
-            for(int i=0; i < 5; i++){
-                color[j] += lineWidth*float(i*i) / abs(fract(t - 0.01*float(j)+float(i)*0.01)*1.0 - length(uv));        
-            }
-        }
+        // --- EFECTO 2: ONDA DE LUZ PULSANTE (COMO LA IMAGEN) ---
+        float waveSpeed = 0.6;
+        float waveFrequency = 6.0;
+        float waveIntensity = 0.5;
+        // Distancia circular desde el centro
+        float dist = length(uv);
+        // Onda sinusoidal pulsante
+        float wave = sin(waveFrequency * dist - (time * waveSpeed)) * waveIntensity;
+        // Grosor de la línea pulsante
+        float linePulse = 0.005 / abs(dist + wave);
+
+        // --- EFECTO 3: ALTERACIÓN DEL PATRÓN DE PÍXELES (RUIDO MOSAICO) ---
+        // Crear un mosaico de píxeles grandes
+        float mosaicScale = 64.0;
+        vec2 grid = floor(uv * mosaicScale);
+        float noiseVal = noise(grid);
         
-        ${colorType === 'purple' 
-            ? 'gl_FragColor = vec4(color[2], color[0]*0.3, color[2]*1.5, 1.0);' 
-            : 'gl_FragColor = vec4(color[0]*0.2, color[1], color[0]*0.5, 1.0);'
+        // Usar el ruido para modular la intensidad de la onda
+        // Esto crea el patrón de píxeles "roto" y alterado
+        float finalPulse = linePulse * (0.8 + noiseVal * 0.4);
+
+        // --- COLORES (IMITANDO LA IMAGEN DE REFERENCIA) ---
+        vec3 colorCyan = vec3(0.3, 0.9, 1.0);  // Cyan vibrante
+        vec3 colorOrange = vec3(1.0, 0.6, 0.2); // Naranja ámbar
+        
+        // Mezcla de colores (Cian en el centro, naranja en los bordes)
+        vec3 mixedColor = mix(colorCyan, colorOrange, smoothstep(0.0, 1.2, dist));
+        
+        // Aplicar la luz final
+        vec3 light = mixedColor * finalPulse;
+
+        // --- AJUSTE DE TEMA (PÚRPURA / VERDE) ---
+        if (themeType == 0) { // Charlotte (Púrpura)
+            // Mantener cian/naranja, pero sutilmente más púrpura
+            light = mix(light, vec3(0.7, 0.2, 1.0), 0.1); 
+        } else { // Protectora (Verde)
+            // Mezclar más verde esmeralda
+            light = mix(light, vec3(0.1, 1.0, 0.5), 0.2);
         }
+
+        // --- FINAL COLOR ASSEMBLY ---
+        // Fondo oscuro + Luz pulsante pixelada
+        col += light;
+
+        gl_FragColor = vec4(col, 1.0);
     }
 `;
 
-function initShader(containerId, colorTheme) {
+function createShader(containerId, theme) {
     const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const scene = new THREE.Scene();
     const camera = new THREE.Camera();
     camera.position.z = 1;
-    const scene = new THREE.Scene();
-    const geometry = new THREE.PlaneBufferGeometry(2, 2);
 
+    // Usar PlaneGeometry para texturizado UV
+    const geometry = new THREE.PlaneGeometry(2, 2);
     const uniforms = {
-        time: { type: "f", value: 1.0 },
-        resolution: { type: "v2", value: new THREE.Vector2() }
+        time: { value: 1.0 },
+        resolution: { value: new THREE.Vector2() },
+        themeType: { value: theme } // Paso del tipo de tema
     };
 
     const material = new THREE.ShaderMaterial({
-        uniforms: uniforms,
-        vertexShader: vertexShader,
-        fragmentShader: fragmentShaderSource(colorTheme)
+        uniforms,
+        vertexShader,
+        fragmentShader,
+        transparent: true // Permite ver el fondo oscuro
     });
 
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    // Renderer con Alpha para transparencia
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     container.appendChild(renderer.domElement);
 
     function resize() {
-        const rect = container.getBoundingClientRect();
-        renderer.setSize(rect.width, rect.height);
-        uniforms.resolution.value.x = renderer.domElement.width;
-        uniforms.resolution.value.y = renderer.domElement.height;
+        const w = container.offsetWidth;
+        const h = container.offsetHeight;
+        renderer.setSize(w, h);
+        uniforms.resolution.value.x = w;
+        uniforms.resolution.value.y = h;
     }
 
     window.addEventListener('resize', resize);
     resize();
 
-    function animate() {
+    function animate(now) {
         requestAnimationFrame(animate);
-        uniforms.time.value += 0.05;
+        uniforms.time.value = now * 0.001; // Tiempo en segundos
         renderer.render(scene, camera);
     }
-    animate();
+    requestAnimationFrame(animate);
 }
 
-// Inicializar ambos fondos
-initShader('shader-charlotte', 'purple');
-initShader('shader-protectora', 'green');
+// Inicializar: 0 para Púrpura (Charlotte), 1 para Verde (Protectora)
+window.addEventListener('DOMContentLoaded', () => {
+    createShader('shader-charlotte', 0);
+    createShader('shader-protectora', 1);
+});
