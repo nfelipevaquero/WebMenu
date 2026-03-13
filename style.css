@@ -1,13 +1,10 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
     font-family: 'Inter', sans-serif;
-    background-color: #000;
+    background: #000;
     overflow: hidden;
+    color: white;
 }
 
 .split-container {
@@ -23,87 +20,87 @@ body {
     align-items: center;
     justify-content: center;
     text-decoration: none;
-    transition: flex 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: flex 0.8s cubic-bezier(0.2, 1, 0.3, 1);
     overflow: hidden;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.split:hover {
-    flex: 1.5;
-}
+/* Fondos de respaldo por si el shader tarda en cargar */
+.left { background: radial-gradient(circle at center, #1a0b2e 0%, #000 100%); }
+.right { background: radial-gradient(circle at center, #0b2e1a 0%, #000 100%); }
 
-/* El contenedor del Shader ocupa todo el fondo */
-.shader-container {
+.split:hover { flex: 1.6; }
+
+/* CORRECCIÓN: Contenedor del Shader al 100% del fondo */
+.shader-canvas-container {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: 1;
+    z-index: 1; /* Fondo inferior */
+    pointer-events: none; /* No interfiere con los clics */
 }
 
-/* Capa de oscurecimiento para legibilidad */
+/* Fuerza al canvas interno a ocupar el 100% */
+.shader-canvas-container canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Capa de contraste sutil por encima del shader */
 .split::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.3);
-    z-index: 2;
-    transition: background 0.5s;
+    background: rgba(0, 0, 0, 0.2);
+    z-index: 2; /* Por encima del shader */
 }
 
-.split:hover::after {
-    background: rgba(0, 0, 0, 0.1);
-}
-
+/* CORRECCIÓN: Contenido de texto flotando por encima de todo */
 .content {
     position: relative;
-    z-index: 3;
+    z-index: 10; /* Capa superior */
     text-align: center;
-    color: white;
-    pointer-events: none; /* Permite que el hover pase al padre */
+    transition: transform 0.5s ease;
 }
+
+.split:hover .content { transform: scale(1.1); }
 
 .tag {
     text-transform: uppercase;
-    letter-spacing: 5px;
-    font-size: 0.7rem;
-    opacity: 0.7;
-    margin-bottom: 10px;
+    letter-spacing: 4px;
+    font-size: 0.75rem;
     display: block;
+    margin-bottom: 0.5rem;
+    color: rgba(255,255,255,0.7);
 }
 
 h1 {
-    font-size: clamp(2rem, 6vw, 4.5rem);
+    font-size: clamp(2.5rem, 8vw, 5rem);
     font-weight: 900;
-    letter-spacing: -2px;
-    text-transform: uppercase;
     font-style: italic;
+    line-height: 0.9;
+    text-transform: uppercase;
 }
 
 .btn {
-    margin-top: 20px;
-    padding: 10px 30px;
-    border: 1px solid white;
+    margin-top: 1.5rem;
+    padding: 0.8rem 2rem;
+    border: 1px solid rgba(255,255,255,0.4);
     display: inline-block;
+    font-size: 0.9rem;
     font-weight: bold;
-    text-transform: uppercase;
     letter-spacing: 2px;
-    font-size: 0.8rem;
     transition: 0.3s;
 }
 
 .split:hover .btn {
     background: white;
     color: black;
+    border-color: white;
 }
 
-/* Responsive móvil */
 @media (max-width: 768px) {
-    .split-container {
-        flex-direction: column;
-    }
-    .split:hover {
-        flex: 2;
-    }
+    .split-container { flex-direction: column; }
 }
