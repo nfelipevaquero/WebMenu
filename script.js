@@ -1,7 +1,5 @@
 const vertexShader = `
-    varying vec2 vUv;
     void main() {
-        vUv = uv;
         gl_Position = vec4(position, 1.0);
     }
 `;
@@ -10,78 +8,91 @@ const fragmentShader = `
     precision highp float;
     uniform vec2 resolution;
     uniform float time;
-    uniform vec3 themeColor;
+    uniform vec3 baseColor;
 
-    float noise(vec2 st) {
-        return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+    float random (in float x) {
+        return fract(sin(x)*1e4);
     }
 
-    void main() {
+    void main(void) {
+        // Coordenadas normalizadas
         vec2 uv = (gl_FragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
         
-        // Fondo de líneas verticales
-        float pattern = abs(sin(uv.x * 30.0));
-        vec3 col = vec3(0.01) * pattern;
-
-        // Onda circular
-        float dist = length(uv);
-        float wave = sin(8.0 * dist - (time * 0.5)) * 0.4;
-        float pulse = 0.008 / abs(dist + wave);
-
-        // Mosaico de píxeles
-        vec2 grid = floor(uv * 70.0);
-        float n = noise(grid);
-        float finalPulse = pulse * (0.6 + n * 0.5);
-
-        // Colores Cian y Naranja de la imagen
-        vec3 color1 = vec3(0.2, 0.8, 1.0); // Cian
-        vec3 color2 = vec3(1.0, 0.5, 0.1); // Naranja
-        vec3 base = mix(color1, color2, dist);
+        // Mosaico sutil (mantenido de tu código)
+        vec2 fMosaicScal = vec2(4.0, 2.0);
+        vec2 vScreenSize = vec2(256.0, 256.0);
+        uv.x = floor(uv.x * vScreenSize.x / fMosaicScal.x) / (vScreenSize.x / fMosaicScal.x);
+        uv.y = floor(uv.y * vScreenSize.y / fMosaicScal.y) / (vScreenSize.y / fMosaicScal.y);       
+          
+        // VELOCIDAD: Reducida para que sea más lenta
+        float t = time * 0.2 + random(uv.x) * 0.4; 
         
-        // Mezclar con el color de la sección
-        base = mix(base, themeColor, 0.2);
+        // GROSOR: Aumentado de 0.0008 a 0.002 para que NO se vea negro
+        float lineWidth = 0.002;
 
-        col += base * finalPulse;
-        gl_FragColor = vec4(col, 1.0);
+        vec3 colorLines = vec3(0.0);
+        for(int j = 0; j < 3; j++){
+            for(int i=0; i < 5; i++){
+                // CAMBIO CLAVE: Usamos abs(uv.y) o uv.x en lugar de length(uv) para eliminar el círculo
+                // Esto hace que las líneas atraviesen toda la sección
+                float linePos = fract(t - 0.01*float(j) + float(i)*0.01);
+                colorLines[j] += lineWidth * float(i*i) / abs(linePos - abs(uv.y));        
+            }
+        }
+
+        // Aplicamos el color y aumentamos un poco la intensidad
+        vec3 finalColor = colorLines * baseColor * 1.5;
+        
+        gl_FragColor = vec4(finalColor, 1.0);
     }
 `;
 
-function startShader(id, color) {
-    const el = document.getElementById(id);
+function initShader(containerId, colorHex) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
     const scene = new THREE.Scene();
     const camera = new THREE.Camera();
     camera.position.z = 1;
+
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    el.appendChild(renderer.domElement);
+    container.appendChild(renderer.domElement);
 
     const uniforms = {
-        time: { value: 0 },
+        time: { value: 1.0 },
         resolution: { value: new THREE.Vector2() },
-        themeColor: { value: new THREE.Color(color) }
+        baseColor: { value: new THREE.Color(colorHex) }
     };
 
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
+    const material = new THREE.ShaderMaterial({
         uniforms, vertexShader, fragmentShader
-    }));
+    });
+
+    // Usamos PlaneGeometry estándar
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
     scene.add(mesh);
 
     function resize() {
-        const w = el.clientWidth, h = el.clientHeight;
+        const w = container.clientWidth;
+        const h = container.clientHeight;
         renderer.setSize(w, h);
         uniforms.resolution.value.set(w, h);
     }
+
     window.addEventListener('resize', resize);
     resize();
 
-    function anim(t) {
-        uniforms.time.value = t * 0.002;
+    function animate(now) {
+        // Multiplicador de tiempo muy bajo para máxima lentitud
+        uniforms.time.value = now * 0.0005; 
         renderer.render(scene, camera);
-        requestAnimationFrame(anim);
+        requestAnimationFrame(animate);
     }
-    requestAnimationFrame(anim);
+    requestAnimationFrame(animate);
 }
 
-// Colores específicos para cada sección
-startShader('shader-1', '#8000ff'); // Púrpura
-startShader('shader-2', '#00ff80'); // Verde
-startShader('shader-3', '#0080ff'); // Azul
+window.addEventListener('DOMContentLoaded', () => {
+    initShader('canvas-1', '#a855f7'); // Púrpura
+    initShader('canvas-2', '#22c55e'); // Verde
+    initShader('canvas-3', '#ef4444'); // Rojo
+});
