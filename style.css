@@ -5,102 +5,116 @@ body {
     background: #000;
     overflow: hidden;
     color: white;
+    width: 100vw;
+    height: 100vh;
 }
 
 .split-container {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 columnas iguales */
     height: 100vh;
     width: 100vw;
+    transition: grid-template-columns 0.8s cubic-bezier(0.2, 1, 0.3, 1);
 }
 
-.split {
+.split-section {
     position: relative;
-    flex: 1;
+    text-decoration: none;
+    overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
-    text-decoration: none;
-    transition: flex 0.8s cubic-bezier(0.2, 1, 0.3, 1);
-    overflow: hidden;
 }
 
-/* Fondos de respaldo por si el shader tarda en cargar */
-.left { background: radial-gradient(circle at center, #1a0b2e 0%, #000 100%); }
-.right { background: radial-gradient(circle at center, #0b2e1a 0%, #000 100%); }
+/* Efecto de expansión: La columna sobre la que estás pasa a 2fr, las otras se quedan en 1fr */
+.split-container:has(.split-section:hover) {
+    grid-template-columns: repeat(auto-fit, minmax(10%, 1fr));
+}
 
-.split:hover { flex: 1.6; }
+.split-section:hover {
+    flex-grow: 1.8; /* Ajuste sutil para la expansión */
+}
 
-/* CORRECCIÓN: Contenedor del Shader al 100% del fondo */
-.shader-canvas-container {
+/* --- CORRECCIÓN: Shader de Fondo Total --- */
+.shader-background {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     z-index: 1; /* Fondo inferior */
-    pointer-events: none; /* No interfiere con los clics */
+    pointer-events: none; /* No interfiere */
 }
 
 /* Fuerza al canvas interno a ocupar el 100% */
-.shader-canvas-container canvas {
+.shader-background canvas {
     display: block;
     width: 100% !important;
     height: 100% !important;
 }
 
 /* Capa de contraste sutil por encima del shader */
-.split::after {
+.split-section::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(0, 0, 0, 0.15); /* Contraste sutil */
     z-index: 2; /* Por encima del shader */
 }
 
-/* CORRECCIÓN: Contenido de texto flotando por encima de todo */
-.content {
+/* --- CORRECCIÓN: Contenido de Texto --- */
+.content-overlay {
     position: relative;
     z-index: 10; /* Capa superior */
     text-align: center;
     transition: transform 0.5s ease;
+    padding: 2rem;
 }
 
-.split:hover .content { transform: scale(1.1); }
+.split-section:hover .content-overlay { transform: scale(1.15); }
 
 .tag {
     text-transform: uppercase;
-    letter-spacing: 4px;
-    font-size: 0.75rem;
+    letter-spacing: 5px;
+    font-size: 0.7rem;
     display: block;
     margin-bottom: 0.5rem;
-    color: rgba(255,255,255,0.7);
+    color: rgba(255,255,255,0.8);
 }
 
 h1 {
-    font-size: clamp(2.5rem, 8vw, 5rem);
+    font-size: clamp(2rem, 6vw, 4.5rem);
     font-weight: 900;
     font-style: italic;
-    line-height: 0.9;
+    line-height: 0.85;
     text-transform: uppercase;
 }
 
 .btn {
     margin-top: 1.5rem;
-    padding: 0.8rem 2rem;
+    padding: 0.8rem 2.2rem;
     border: 1px solid rgba(255,255,255,0.4);
     display: inline-block;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     font-weight: bold;
-    letter-spacing: 2px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
     transition: 0.3s;
 }
 
-.split:hover .btn {
+.split-section:hover .btn {
     background: white;
     color: black;
     border-color: white;
 }
 
+/* Responsive móvil: Apilado vertical */
 @media (max-width: 768px) {
-    .split-container { flex-direction: column; }
+    .split-container {
+        grid-template-columns: 1fr;
+        grid-template-rows: repeat(3, 1fr);
+    }
+    .split-container:has(.split-section:hover) {
+        grid-template-rows: repeat(auto-fit, minmax(20%, 1fr));
+    }
 }
