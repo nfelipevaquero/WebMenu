@@ -83,6 +83,7 @@ window.addEventListener('load', () => {
     setTimeout(() => {
         initShader('canvas-1', '#a855f7');
         initShader('canvas-2', '#22c55e');
-        initShader('canvas-3', '#ef4444');
+        initShader('canvas-3', '#ffffff');
+        initShader('canvas-4', '#ef4444');
     }, 100);
 });
